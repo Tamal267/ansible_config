@@ -1,0 +1,11 @@
+- hosts: lab
+  become: yes
+  tasks:
+    - name: Copy site unblock script
+      copy:
+        src: site_unblock.sh
+        dest: /tmp/site_unblock.sh
+        mode: '0755'
+
+    - name: Run site_unblock script
+      command: /tmp/site_unblock.sh

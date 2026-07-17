@@ -1,0 +1,11 @@
+- hosts: lab
+  become: yes
+  tasks:
+    - name: Copy site block script
+      copy:
+        src: site_block.sh
+        dest: /tmp/site_block.sh
+        mode: '0755'
+
+    - name: Run site_block script
+      command: /tmp/site_block.sh
