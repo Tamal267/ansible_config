@@ -35,6 +35,13 @@ Ensure you have SSH access to the `ansible_user` (e.g., `admin`) on all target P
 
 Run the playbooks from the root of this repository.
 
+### Test Connectivity (Ping)
+
+To test connectivity to all target PCs defined in the inventory, run:
+```bash
+ansible lab -m ping -i inventory.ini
+```
+
 ### Block Internet Access (Start Contest Mode)
 
 To restrict internet access on all contest PCs, run:
@@ -54,5 +61,12 @@ Or for multiple PCs:
 ansible-playbook -i inventory.ini -K site_block.yml -l pc1,pc2
 ```
 > **Note:** The `-l` (or `--limit`) flag will only run the playbook on the specified PC(s).
+
+### Upgrade Target PCs
+
+To update and upgrade packages on all target PCs, run:
+```bash
+ansible-playbook -i inventory.ini -K upgrade.yml
+```
 
 ---
