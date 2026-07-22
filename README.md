@@ -188,6 +188,56 @@ ansible-playbook -i inventory.ini -K sync_time.yml -e "target_time='2026-07-22 0
 
 ---
 
+## Uptime Kuma Dashboard & Monitoring
+
+Uptime Kuma is used to monitor real-time TCP connectivity (port 22) for all contest PCs from a central dashboard.
+
+### 1. Install Docker & Run Uptime Kuma Container
+
+On the host machine:
+
+```bash
+# Install Docker and Docker Compose
+sudo pacman -Syu docker docker-compose
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+
+Create a directory (e.g., `~/projects/uptime-kuma`) with `compose.yml`:
+```yaml
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./uptime-kuma-data:/app/data
+```
+
+Start Uptime Kuma:
+```bash
+docker compose up -d
+```
+Navigate to `http://127.0.0.1:3001` in your browser and create your admin account (e.g. username `admin`).
+
+### 2. Synchronize Ansible Inventory to Uptime Kuma
+
+Automatically create/update monitors in Uptime Kuma for all target hosts defined in `inventory.ini`:
+
+```bash
+# Set up Python virtual environment & install requirements
+python3 -m venv .venv
+source .venv/bin/activate
+pip install uptime-kuma-api
+
+# Run synchronization script
+./sync_uptime_kuma.py -i inventory.ini --username admin
+```
+
+---
+
+
 
 
 
