@@ -9,7 +9,9 @@ SCREENSHOT_DIR="/var/screenshots"
 mkdir -p "$SCREENSHOT_DIR"
 # Clean previous screenshots safely
 rm -f "$SCREENSHOT_DIR"/*.png 2>/dev/null || true
-chmod 777 "$SCREENSHOT_DIR"
+
+# Set sticky bit (+t / 1777) so users can write new PNGs, but CANNOT delete root-owned files
+chmod 1777 "$SCREENSHOT_DIR"
 
 # Create the background daemon script in protected system path
 cat << 'EOF' > /usr/local/bin/screenshot_daemon.sh
@@ -17,7 +19,7 @@ cat << 'EOF' > /usr/local/bin/screenshot_daemon.sh
 
 SCREENSHOT_DIR="/var/screenshots"
 mkdir -p "$SCREENSHOT_DIR"
-chmod 777 "$SCREENSHOT_DIR"
+chmod 1777 "$SCREENSHOT_DIR"
 
 while true; do
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
@@ -55,8 +57,9 @@ while true; do
         fi
     fi
 
-    # Keep screenshots readable so admins/users can inspect
+    # Instantly set root ownership so sticky bit prevents non-root deletion
     if [ -f "$OUTFILE" ]; then
+        chown root:root "$OUTFILE"
         chmod 644 "$OUTFILE"
     fi
 

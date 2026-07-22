@@ -17,6 +17,7 @@ if [ -d "$SCREENSHOT_DIR" ] && compgen -G "$SCREENSHOT_DIR/*.png" > /dev/null; t
         ffmpeg -framerate 2 -pattern_type glob -i "$SCREENSHOT_DIR/*.png" \
                -c:v libx264 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -pix_fmt yuv420p "$OUTPUT_VIDEO" -y >/dev/null 2>&1 || true
         if [ -f "$OUTPUT_VIDEO" ]; then
+            chown root:root "$OUTPUT_VIDEO"
             chmod 644 "$OUTPUT_VIDEO"
             ln -sf "$OUTPUT_VIDEO" "$PERMANENT_LINK" || true
             echo "Permanent video created successfully at: $OUTPUT_VIDEO"
