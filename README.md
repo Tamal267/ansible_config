@@ -194,10 +194,16 @@ Uptime Kuma is used to monitor real-time TCP connectivity (port 22) for all cont
 
 ### 1. Install Docker & Run Uptime Kuma Container
 
-On the host machine:
-
+On Debian/Ubuntu-based systems:
 ```bash
-# Install Docker and Docker Compose
+sudo apt update
+sudo apt install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+
+On Arch Linux:
+```bash
 sudo pacman -Syu docker docker-compose
 sudo systemctl enable --now docker
 sudo usermod -aG docker $USER
