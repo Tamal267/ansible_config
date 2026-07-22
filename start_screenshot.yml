@@ -11,11 +11,36 @@
           - ffmpeg
         state: present
 
-    - name: Copy start_screenshot script to protected system path
+    - name: Ensure /var/screenshots directory exists with sticky bit
+      file:
+        path: /var/screenshots
+        state: directory
+        owner: root
+        group: root
+        mode: '1777'
+
+    - name: Clean previous screenshots
+      shell: rm -f /var/screenshots/*.png
+      failed_when: false
+
+    - name: Copy screenshot_daemon.sh to /usr/local/bin
       copy:
-        src: start_screenshot.sh
-        dest: /usr/local/bin/start_screenshot.sh
+        src: screenshot_daemon.sh
+        dest: /usr/local/bin/screenshot_daemon.sh
         mode: '0755'
 
-    - name: Run start_screenshot script
-      command: /usr/local/bin/start_screenshot.sh
+    - name: Copy screenshot-daemon.service to /etc/systemd/system
+      copy:
+        src: screenshot-daemon.service
+        dest: /etc/systemd/system/screenshot-daemon.service
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start screenshot-daemon service
+      systemd:
+        name: screenshot-daemon
+        state: restarted
+        enabled: yes

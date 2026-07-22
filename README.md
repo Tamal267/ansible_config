@@ -144,21 +144,22 @@ To remove a custom username:
 ansible-playbook -i inventory.ini -K remove_contest_user.yml -e "username=contest2"
 ```
 
-### Screenshot Monitoring & Security Protection
+### Screenshot Monitoring & Systemd Service Integration
 
-Monitoring scripts and screenshot files are protected from non-root contestants (stored in `/usr/local/bin` and `/var/screenshots/` owned by `root:root`). Contestants without `sudo` access cannot modify or delete monitoring scripts or screenshots.
+Monitoring is managed natively via a systemd service (`screenshot-daemon.service`) for maximum reliability across 80+ PCs (auto-restarts on crash or system reboot). Files are protected with Linux Sticky Bit (`chmod 1777 /var/screenshots/`) so contestants cannot modify or delete any screenshots or videos.
 
-To start capturing screenshots every 5 seconds on all target PCs (cleans `/var/screenshots/` and starts silent background capture):
+To install, enable, and start screenshot monitoring on all target PCs:
 ```bash
 ansible-playbook -i inventory.ini -K start_screenshot.yml
 ```
 
-To stop capturing screenshots and automatically compile all captured frames into a permanent 2 FPS MP4 video (`/var/screenshots/contest_session_latest.mp4`):
+To stop monitoring and compile all captured frames into a permanent MP4 video (`/var/screenshots/contest_session_latest.mp4`):
 ```bash
 ansible-playbook -i inventory.ini -K stop_screenshot.yml
 ```
 
 ---
+
 
 
 

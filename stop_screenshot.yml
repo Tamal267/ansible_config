@@ -6,11 +6,18 @@
         name: ffmpeg
         state: present
 
-    - name: Copy stop_screenshot script to protected system path
+    - name: Stop screenshot-daemon systemd service
+      systemd:
+        name: screenshot-daemon
+        state: stopped
+        enabled: no
+      failed_when: false
+
+    - name: Copy stop_screenshot script
       copy:
         src: stop_screenshot.sh
         dest: /usr/local/bin/stop_screenshot.sh
         mode: '0755'
 
-    - name: Run stop_screenshot script
+    - name: Run stop_screenshot script (generate MP4 video)
       command: /usr/local/bin/stop_screenshot.sh

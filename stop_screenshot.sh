@@ -2,8 +2,8 @@
 
 set -eu
 
-# Stop screenshot daemon
-pkill -f "screenshot_daemon.sh" || true
+# Stop systemd service cleanly
+systemctl stop screenshot-daemon.service || true
 
 SCREENSHOT_DIR="/var/screenshots"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
