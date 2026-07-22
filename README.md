@@ -84,11 +84,26 @@ ansible lab1 -m ping -i inventory.ini
 
 ### Block Internet Access (Start Contest Mode)
 
+> **Warning:** Ensure all package installation and setup playbooks (`setup_contest_user.yml`, `start_screenshot.yml`, `upgrade.yml`) are executed **BEFORE** running `site_block.yml`. Blocking internet access first will prevent target PCs from reaching online package repositories (`apt`).
+
+> **Important:** Before running `site_block.yml`, update `site_block.sh` (lines 21–22) with the IP address of your contest/judge server:
+> ```bash
+> ufw allow out to <YOUR_CONTEST_SERVER_IP> proto tcp port 80
+> ufw allow out to <YOUR_CONTEST_SERVER_IP> proto tcp port 443
+> ```
+
 To restrict internet access on all contest PCs, run:
 ```bash
 ansible-playbook -i inventory.ini -K site_block.yml
 ```
 > **Note:** The `--ask-become-pass` (or `-K`) flag will prompt you for the privilege escalation (`sudo`) password on the remote machines. If you have passwordless sudo configured on the target PCs, you can omit this flag.
+
+### Restore Internet Access (Unblock Contest Mode)
+
+To restore full internet access on all contest PCs once the contest is over, run:
+```bash
+ansible-playbook -i inventory.ini -K site_unblock.yml
+```
 
 ### Run playbook on specific PC
 
@@ -158,7 +173,21 @@ To stop monitoring and compile all captured frames into a permanent MP4 video (`
 ansible-playbook -i inventory.ini -K stop_screenshot.yml
 ```
 
+### Synchronize System Date & Time (Offline / Restricted Network)
+
+During a contest when internet access is blocked, target PCs cannot contact external NTP servers. To synchronize all target PCs to the exact date & time of the administrator host machine (and save the synced time to each PC's BIOS/RTC hardware clock):
+
+```bash
+ansible-playbook -i inventory.ini -K sync_time.yml
+```
+
+To set a specific custom date & time across all target PCs:
+```bash
+ansible-playbook -i inventory.ini -K sync_time.yml -e "target_time='2026-07-22 09:00:00'"
+```
+
 ---
+
 
 
 

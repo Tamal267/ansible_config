@@ -1,0 +1,16 @@
+- hosts: all
+  become: yes
+  vars:
+    # Default to current date & time on controller host machine if target_time is not specified
+    target_time: "{{ lookup('pipe', 'date \"+%Y-%m-%d %H:%M:%S\"') }}"
+  tasks:
+    - name: Disable NTP time synchronization on target PCs
+      command: timedatectl set-ntp false
+      failed_when: false
+
+    - name: Set system date and time on target PCs
+      command: date -s "{{ target_time }}"
+
+    - name: Sync system clock to hardware clock (RTC)
+      command: hwclock --systohc
+      failed_when: false

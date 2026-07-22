@@ -1,14 +1,13 @@
 - hosts: all
   become: yes
   tasks:
-    - name: Ensure silent screenshot tools are installed
+    - name: Ensure screenshot tools, ffmpeg, and mpv media player are installed
       package:
         name:
           - scrot
           - gnome-screenshot
-          - imagemagick
-          - grim
           - ffmpeg
+          - mpv
         state: present
 
     - name: Ensure /var/screenshots directory exists with sticky bit

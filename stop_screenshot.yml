@@ -1,9 +1,11 @@
 - hosts: all
   become: yes
   tasks:
-    - name: Ensure ffmpeg is installed for video creation
+    - name: Ensure ffmpeg and mpv are installed for video creation & playback
       package:
-        name: ffmpeg
+        name:
+          - ffmpeg
+          - mpv
         state: present
 
     - name: Stop screenshot-daemon systemd service
