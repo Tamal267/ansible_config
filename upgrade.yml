@@ -1,4 +1,4 @@
-- hosts: lab
+- hosts: all
   become: yes
   tasks:
     - name: Update apt cache and upgrade all packages

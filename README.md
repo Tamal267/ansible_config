@@ -16,18 +16,54 @@ sudo apt update
 sudo apt install -y ansible
 ```
 
-### 2. Configure Target PCs (Inventory)
-
-Update the `inventory.ini` file with the hostnames or IP addresses of the contest PCs:
-```ini
-[lab]
-pc1 ansible_host=192.168.122.161
-pc2 ansible_host=192.168.122.27
-
-[lab:vars]
-ansible_user=admin
+On Arch Linux:
+```bash
+sudo pacman -S ansible
 ```
-Ensure you have SSH access to the `ansible_user` (e.g., `admin`) on all target PCs. It is recommended to distribute your SSH public key to the target PCs for passwordless authentication.
+
+### 2. Set Up SSH Key Pair (Passwordless Authentication)
+
+Generate an SSH key pair for Ansible and copy the public key to all target machines:
+
+1. **Generate SSH Key Pair:**
+   ```bash
+   ssh-keygen -t ed25519 -C ansible
+   ```
+   *(Save the key file as `~/.ssh/ansible` when prompted, or pass `-f ~/.ssh/ansible`)*
+
+2. **Copy Public Key to Target PCs:**
+   ```bash
+   ssh-copy-id -i ~/.ssh/ansible mcc@<TARGET_IP>
+   ```
+   *Example:*
+   ```bash
+   ssh-copy-id -i ~/.ssh/ansible mcc@192.168.122.153
+   ssh-copy-id -i ~/.ssh/ansible mcc@192.168.122.215
+   ```
+
+3. **Verify SSH Connection:**
+   ```bash
+   ssh -i ~/.ssh/ansible mcc@192.168.122.153
+   ```
+
+### 3. Configure Target PCs (Inventory)
+
+Update the `inventory.ini` file with the hostnames or IP addresses of the contest PCs, the remote user, and the SSH private key path:
+```ini
+[lab1]
+pc1 ansible_host=192.168.122.153
+
+[lab2]
+pc2 ansible_host=192.168.122.215
+
+[all:children]
+lab1
+lab2
+
+[all:vars]
+ansible_user=mcc
+ansible_ssh_private_key_file=~/.ssh/ansible
+```
 
 ---
 
@@ -39,7 +75,11 @@ Run the playbooks from the root of this repository.
 
 To test connectivity to all target PCs defined in the inventory, run:
 ```bash
-ansible lab -m ping -i inventory.ini
+ansible all -m ping -i inventory.ini
+```
+Or to test a specific group (e.g., `lab1`):
+```bash
+ansible lab1 -m ping -i inventory.ini
 ```
 
 ### Block Internet Access (Start Contest Mode)

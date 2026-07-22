@@ -1,4 +1,4 @@
-- hosts: lab
+- hosts: all
   become: yes
   tasks:
     - name: Copy site block script

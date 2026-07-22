@@ -2,4 +2,8 @@
 
 set -eu
 
-echo "y" | ufw reset
+ufw --force reset
+ufw default allow incoming
+ufw default allow outgoing
+ufw --force disable
+echo "UNBLOCKED"
