@@ -6,11 +6,11 @@
         name: ffmpeg
         state: present
 
-    - name: Copy stop_screenshot script
+    - name: Copy stop_screenshot script to protected system path
       copy:
         src: stop_screenshot.sh
-        dest: /tmp/stop_screenshot.sh
+        dest: /usr/local/bin/stop_screenshot.sh
         mode: '0755'
 
     - name: Run stop_screenshot script
-      command: /tmp/stop_screenshot.sh
+      command: /usr/local/bin/stop_screenshot.sh

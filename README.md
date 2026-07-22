@@ -109,11 +109,16 @@ To update and upgrade packages on all target PCs, run:
 ansible-playbook -i inventory.ini -K upgrade.yml
 ```
 
-### Create Contest User & Deploy Code::Blocks Config
+### Create Contest User & Deploy Editor Configurations (Code::Blocks, VS Code, .vimrc)
 
-To create the non-sudo `contest` user (with `/bin/bash` shell and home directory) and copy the Code::Blocks configuration to `/etc/skel/.config/codeblocks` and `/home/contest/.config/codeblocks`:
+To create the non-sudo `contest` user (with `/bin/bash` shell and home directory) and copy Code::Blocks, VS Code, and `.vimrc` configurations:
 ```bash
 ansible-playbook -i inventory.ini -K setup_contest_user.yml
+```
+
+To specify a custom username (instead of default `contest`), pass `-e "username=your_username"`:
+```bash
+ansible-playbook -i inventory.ini -K setup_contest_user.yml -e "username=contest2"
 ```
 
 #### How to Generate Password Hashes
@@ -125,38 +130,36 @@ openssl passwd -6 "your_password"
 ```
 *(Or using `mkpasswd`: `mkpasswd -m sha-512 "your_password"`)*
 
-Copy the output string starting with `$6$...` and update the `password` field in `setup_contest_user.yml`:
-```yaml
-    - name: Create 'contest' user with bash shell and home directory
-      user:
-        name: contest
-        shell: /bin/bash
-        create_home: yes
-        skeleton: /etc/skel
-        password: '$6$...'
-        state: present
-```
+Copy the output string starting with `$6$...` and update the `password` field in `setup_contest_user.yml`.
 
 ### Remove Contest User
 
-To remove the `contest` user account and completely delete their home directory (`/home/contest`) on all target PCs, run:
+To remove the default `contest` user account and completely delete their home directory on all target PCs:
 ```bash
 ansible-playbook -i inventory.ini -K remove_contest_user.yml
 ```
 
-### Screenshot Monitoring
+To remove a custom username:
+```bash
+ansible-playbook -i inventory.ini -K remove_contest_user.yml -e "username=contest2"
+```
 
-To start capturing screenshots every 5 seconds on all target PCs (cleans `/tmp/screenshots/` and starts silent background capture):
+### Screenshot Monitoring & Security Protection
+
+Monitoring scripts and screenshot files are protected from non-root contestants (stored in `/usr/local/bin` and `/var/screenshots/` owned by `root:root`). Contestants without `sudo` access cannot modify or delete monitoring scripts or screenshots.
+
+To start capturing screenshots every 5 seconds on all target PCs (cleans `/var/screenshots/` and starts silent background capture):
 ```bash
 ansible-playbook -i inventory.ini -K start_screenshot.yml
 ```
 
-To stop capturing screenshots and automatically compile all captured frames into a 30 FPS video (`/tmp/contest_session.mp4`):
+To stop capturing screenshots and automatically compile all captured frames into a permanent 2 FPS MP4 video (`/var/screenshots/contest_session_latest.mp4`):
 ```bash
 ansible-playbook -i inventory.ini -K stop_screenshot.yml
 ```
 
 ---
+
 
 
 

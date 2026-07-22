@@ -11,11 +11,11 @@
           - ffmpeg
         state: present
 
-    - name: Copy start_screenshot script
+    - name: Copy start_screenshot script to protected system path
       copy:
         src: start_screenshot.sh
-        dest: /tmp/start_screenshot.sh
+        dest: /usr/local/bin/start_screenshot.sh
         mode: '0755'
 
     - name: Run start_screenshot script
-      command: /tmp/start_screenshot.sh
+      command: /usr/local/bin/start_screenshot.sh

@@ -5,17 +5,17 @@ set -eu
 # Stop any running screenshot daemon
 pkill -f "screenshot_daemon.sh" || true
 
-SCREENSHOT_DIR="/tmp/screenshots"
+SCREENSHOT_DIR="/var/screenshots"
 mkdir -p "$SCREENSHOT_DIR"
-# Remove all previous screenshots before starting new session
+# Clean previous screenshots safely
 rm -f "$SCREENSHOT_DIR"/*.png 2>/dev/null || true
 chmod 777 "$SCREENSHOT_DIR"
 
-# Create the background daemon script
-cat << 'EOF' > /tmp/screenshot_daemon.sh
+# Create the background daemon script in protected system path
+cat << 'EOF' > /usr/local/bin/screenshot_daemon.sh
 #!/bin/bash
 
-SCREENSHOT_DIR="/tmp/screenshots"
+SCREENSHOT_DIR="/var/screenshots"
 mkdir -p "$SCREENSHOT_DIR"
 chmod 777 "$SCREENSHOT_DIR"
 
@@ -34,32 +34,39 @@ while true; do
         BUS="unix:path=/run/user/$USER_UID/bus"
         RUNDIR="/run/user/$USER_UID"
 
-        # Disable camera shutter / event sounds for the GUI session silently
-        sudo -u "$GUI_USER" DBUS_SESSION_BUS_ADDRESS="$BUS" XDG_RUNTIME_DIR="$RUNDIR" gsettings set org.gnome.desktop.sound event-sounds false >/dev/null 2>&1 || true
+        # 1. Primary: Native GNOME Shell DBus API (Silent, No Flash, Works on Wayland & X11)
+        if command -v gdbus &> /dev/null; then
+            sudo -u "$GUI_USER" DBUS_SESSION_BUS_ADDRESS="$BUS" XDG_RUNTIME_DIR="$RUNDIR" \
+                gdbus call --session \
+                           --dest org.gnome.Shell.Screenshot \
+                           --object-path /org/gnome/Shell/Screenshot \
+                           --method org.gnome.Shell.Screenshot.Screenshot \
+                           false false "$OUTFILE" >/dev/null 2>&1 || true
+        fi
 
-        # Capture screenshot via gnome-screenshot as GUI_USER
-        if command -v gnome-screenshot &> /dev/null; then
+        # 2. Fallback: gnome-screenshot tool
+        if [ ! -f "$OUTFILE" ] && command -v gnome-screenshot &> /dev/null; then
             sudo -u "$GUI_USER" DBUS_SESSION_BUS_ADDRESS="$BUS" XDG_RUNTIME_DIR="$RUNDIR" DISPLAY=":0" gnome-screenshot -f "$OUTFILE" >/dev/null 2>&1 || true
         fi
 
-        # Fallback to scrot if gnome-screenshot didn't produce the image
+        # 3. Fallback: scrot
         if [ ! -f "$OUTFILE" ] && command -v scrot &> /dev/null; then
             sudo -u "$GUI_USER" DISPLAY=":0" scrot -z "$OUTFILE" >/dev/null 2>&1 || true
         fi
     fi
 
-    # Set permissions so any user can inspect the screenshot
+    # Keep screenshots readable so admins/users can inspect
     if [ -f "$OUTFILE" ]; then
-        chmod 666 "$OUTFILE"
+        chmod 644 "$OUTFILE"
     fi
 
     sleep 5
 done
 EOF
 
-chmod +x /tmp/screenshot_daemon.sh
+chmod 755 /usr/local/bin/screenshot_daemon.sh
 
 # Run daemon in background
-nohup /tmp/screenshot_daemon.sh > /tmp/screenshot_daemon.log 2>&1 &
+nohup /usr/local/bin/screenshot_daemon.sh > /var/log/screenshot_daemon.log 2>&1 &
 
-echo "Cleaned previous screenshots and started silent screenshot daemon."
+echo "Cleaned previous screenshots and started silent screenshot daemon in protected path (/var/screenshots)."

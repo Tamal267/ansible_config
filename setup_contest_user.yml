@@ -1,45 +1,63 @@
 - hosts: all
   become: yes
+  vars:
+    username: contest
   tasks:
-    - name: Ensure /etc/skel/.config/codeblocks directory exists
+    - name: Ensure /etc/skel/.config directory exists
       file:
-        path: /etc/skel/.config/codeblocks
+        path: /etc/skel/.config
         state: directory
         owner: root
         group: root
         mode: '0755'
 
-    - name: Copy Code::Blocks config to /etc/skel
+    - name: Copy .config folder (Code, codeblocks) to /etc/skel/.config
       copy:
-        src: config/codeblocks/
-        dest: /etc/skel/.config/codeblocks/
+        src: config/.config/
+        dest: /etc/skel/.config/
         owner: root
         group: root
         mode: '0644'
         directory_mode: '0755'
 
-    - name: Create 'contest' user with bash shell and home directory
+    - name: Copy .vimrc to /etc/skel
+      copy:
+        src: config/.vimrc
+        dest: /etc/skel/.vimrc
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create user '{{ username }}' with bash shell and home directory
       user:
-        name: contest
+        name: "{{ username }}"
         shell: /bin/bash
         create_home: yes
         skeleton: /etc/skel
         password: '$6$ChbgMGoNGgFVFMem$3YOit.TTj.1fZpO8CX2Fh5rhrp8OLG21AsmQiA/3f2gqLVOs2eXQeAluyuVFoUIvWcNGhE.GbuMQ.W3/KzWBJ1'
         state: present
 
-    - name: Ensure /home/contest/.config/codeblocks directory exists
+    - name: Ensure /home/{{ username }}/.config directory exists
       file:
-        path: /home/contest/.config/codeblocks
+        path: "/home/{{ username }}/.config"
         state: directory
-        owner: contest
-        group: contest
+        owner: "{{ username }}"
+        group: "{{ username }}"
         mode: '0755'
 
-    - name: Copy Code::Blocks config to contest user (overwrite existing)
+    - name: Copy .config folder to {{ username }} user (overwrite existing)
       copy:
-        src: config/codeblocks/
-        dest: /home/contest/.config/codeblocks/
-        owner: contest
-        group: contest
+        src: config/.config/
+        dest: "/home/{{ username }}/.config/"
+        owner: "{{ username }}"
+        group: "{{ username }}"
         mode: '0644'
         directory_mode: '0755'
+
+    - name: Copy .vimrc to {{ username }} user (overwrite existing)
+      copy:
+        src: config/.vimrc
+        dest: "/home/{{ username }}/.vimrc"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: '0644'

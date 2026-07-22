@@ -1,9 +1,11 @@
 - hosts: all
   become: yes
+  vars:
+    username: contest
   tasks:
-    - name: Remove 'contest' user and its home directory
+    - name: Remove user '{{ username }}' and its home directory
       user:
-        name: contest
+        name: "{{ username }}"
         state: absent
         remove: yes
         force: yes
