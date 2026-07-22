@@ -1,0 +1,45 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Ensure /etc/skel/.config/codeblocks directory exists
+      file:
+        path: /etc/skel/.config/codeblocks
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copy Code::Blocks config to /etc/skel
+      copy:
+        src: config/codeblocks/
+        dest: /etc/skel/.config/codeblocks/
+        owner: root
+        group: root
+        mode: '0644'
+        directory_mode: '0755'
+
+    - name: Create 'contest' user with bash shell and home directory
+      user:
+        name: contest
+        shell: /bin/bash
+        create_home: yes
+        skeleton: /etc/skel
+        password: '$6$ChbgMGoNGgFVFMem$3YOit.TTj.1fZpO8CX2Fh5rhrp8OLG21AsmQiA/3f2gqLVOs2eXQeAluyuVFoUIvWcNGhE.GbuMQ.W3/KzWBJ1'
+        state: present
+
+    - name: Ensure /home/contest/.config/codeblocks directory exists
+      file:
+        path: /home/contest/.config/codeblocks
+        state: directory
+        owner: contest
+        group: contest
+        mode: '0755'
+
+    - name: Copy Code::Blocks config to contest user (overwrite existing)
+      copy:
+        src: config/codeblocks/
+        dest: /home/contest/.config/codeblocks/
+        owner: contest
+        group: contest
+        mode: '0644'
+        directory_mode: '0755'

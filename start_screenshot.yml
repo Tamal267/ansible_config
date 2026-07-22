@@ -1,0 +1,21 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Ensure silent screenshot tools are installed
+      package:
+        name:
+          - scrot
+          - gnome-screenshot
+          - imagemagick
+          - grim
+          - ffmpeg
+        state: present
+
+    - name: Copy start_screenshot script
+      copy:
+        src: start_screenshot.sh
+        dest: /tmp/start_screenshot.sh
+        mode: '0755'
+
+    - name: Run start_screenshot script
+      command: /tmp/start_screenshot.sh

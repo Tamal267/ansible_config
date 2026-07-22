@@ -1,0 +1,9 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Remove 'contest' user and its home directory
+      user:
+        name: contest
+        state: absent
+        remove: yes
+        force: yes

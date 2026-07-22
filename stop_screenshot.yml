@@ -1,0 +1,16 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Ensure ffmpeg is installed for video creation
+      package:
+        name: ffmpeg
+        state: present
+
+    - name: Copy stop_screenshot script
+      copy:
+        src: stop_screenshot.sh
+        dest: /tmp/stop_screenshot.sh
+        mode: '0755'
+
+    - name: Run stop_screenshot script
+      command: /tmp/stop_screenshot.sh

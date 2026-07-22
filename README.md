@@ -109,4 +109,55 @@ To update and upgrade packages on all target PCs, run:
 ansible-playbook -i inventory.ini -K upgrade.yml
 ```
 
+### Create Contest User & Deploy Code::Blocks Config
+
+To create the non-sudo `contest` user (with `/bin/bash` shell and home directory) and copy the Code::Blocks configuration to `/etc/skel/.config/codeblocks` and `/home/contest/.config/codeblocks`:
+```bash
+ansible-playbook -i inventory.ini -K setup_contest_user.yml
+```
+
+#### How to Generate Password Hashes
+
+The `setup_contest_user.yml` playbook requires an encrypted SHA-512 password hash. To change the user password or generate a new hash, run:
+
+```bash
+openssl passwd -6 "your_password"
+```
+*(Or using `mkpasswd`: `mkpasswd -m sha-512 "your_password"`)*
+
+Copy the output string starting with `$6$...` and update the `password` field in `setup_contest_user.yml`:
+```yaml
+    - name: Create 'contest' user with bash shell and home directory
+      user:
+        name: contest
+        shell: /bin/bash
+        create_home: yes
+        skeleton: /etc/skel
+        password: '$6$...'
+        state: present
+```
+
+### Remove Contest User
+
+To remove the `contest` user account and completely delete their home directory (`/home/contest`) on all target PCs, run:
+```bash
+ansible-playbook -i inventory.ini -K remove_contest_user.yml
+```
+
+### Screenshot Monitoring
+
+To start capturing screenshots every 5 seconds on all target PCs (cleans `/tmp/screenshots/` and starts silent background capture):
+```bash
+ansible-playbook -i inventory.ini -K start_screenshot.yml
+```
+
+To stop capturing screenshots and automatically compile all captured frames into a 30 FPS video (`/tmp/contest_session.mp4`):
+```bash
+ansible-playbook -i inventory.ini -K stop_screenshot.yml
+```
+
 ---
+
+
+
+
