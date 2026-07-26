@@ -32,14 +32,15 @@ Generate an SSH key pair for Ansible and copy the public key to all target machi
    *(Save the key file as `~/.ssh/ansible` when prompted, or pass `-f ~/.ssh/ansible`)*
 
 2. **Copy Public Key to Target PCs:**
+   Run the helper script to copy your SSH public key to all PCs defined in `inventory.ini`:
    ```bash
-   ssh-copy-id -i ~/.ssh/ansible admin@<TARGET_IP>
+   # Option A: Type password once for all PCs (requires sshpass)
+   ./copy_ssh_keys.sh -p
+
+   # Option B: Interactive (prompts password for each PC)
+   ./copy_ssh_keys.sh
    ```
-   *Example:*
-   ```bash
-   ssh-copy-id -i ~/.ssh/ansible admin@192.168.122.153
-   ssh-copy-id -i ~/.ssh/ansible admin@192.168.122.215
-   ```
+   *(Or manually for individual PCs: `ssh-copy-id -i ~/.ssh/ansible admin@<TARGET_IP>`)*
 
 3. **Verify SSH Connection:**
    ```bash
