@@ -1,6 +1,6 @@
 # Control Multiple Contest PCs from a Host Machine
 
-This repository contains Ansible playbooks and scripts to configure contest PCs for university programming contests. Its main purpose is to easily restrict internet access on all contestant PCs during a contest and restore full access once the contest is over.
+This repository contains Ansible playbooks and scripts to configure contest PCs for university programming contests. Its main purpose is to configure and manage contestant PCs for programming contests.
 
 ---
 
@@ -33,17 +33,17 @@ Generate an SSH key pair for Ansible and copy the public key to all target machi
 
 2. **Copy Public Key to Target PCs:**
    ```bash
-   ssh-copy-id -i ~/.ssh/ansible mcc@<TARGET_IP>
+   ssh-copy-id -i ~/.ssh/ansible admin@<TARGET_IP>
    ```
    *Example:*
    ```bash
-   ssh-copy-id -i ~/.ssh/ansible mcc@192.168.122.153
-   ssh-copy-id -i ~/.ssh/ansible mcc@192.168.122.215
+   ssh-copy-id -i ~/.ssh/ansible admin@192.168.122.153
+   ssh-copy-id -i ~/.ssh/ansible admin@192.168.122.215
    ```
 
 3. **Verify SSH Connection:**
    ```bash
-   ssh -i ~/.ssh/ansible mcc@192.168.122.153
+   ssh -i ~/.ssh/ansible admin@192.168.122.153
    ```
 
 ### 3. Configure Target PCs (Inventory)
@@ -61,7 +61,7 @@ lab1
 lab2
 
 [all:vars]
-ansible_user=mcc
+ansible_user=admin
 ansible_ssh_private_key_file=~/.ssh/ansible
 ```
 
