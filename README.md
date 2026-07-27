@@ -160,6 +160,23 @@ To remove a custom username:
 ansible-playbook -i inventory.ini -K remove_contest_user.yml -e "username=contest2"
 ```
 
+### Change User Password
+
+To change the password for any user account across all target PCs:
+
+```bash
+# Usage via script wrapper:
+./change_password.sh <USERNAME> <NEW_PASSWORD>
+
+# Example:
+./change_password.sh contest MyNewPassword123
+```
+
+Or directly via Ansible playbook:
+```bash
+ansible-playbook -i inventory.ini -K change_password.yml -e "username=contest new_password=MyNewPassword123"
+```
+
 ### Screenshot Monitoring & Systemd Service Integration
 
 Monitoring is managed natively via a systemd service (`screenshot-daemon.service`) for maximum reliability across 80+ PCs (auto-restarts on crash or system reboot). Files are protected with Linux Sticky Bit (`chmod 1777 /var/screenshots/`) so contestants cannot modify or delete any screenshots or videos.
