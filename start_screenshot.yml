@@ -1,9 +1,10 @@
 - hosts: all
   become: yes
   tasks:
-    - name: Ensure screenshot tools, ffmpeg, imagemagick, and mpv media player are installed
+    - name: Ensure screenshot tools, ffmpeg, imagemagick, grim, and mpv media player are installed
       package:
         name:
+          - grim
           - ffmpeg
           - imagemagick
           - x11-utils
