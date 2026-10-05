@@ -1,0 +1,115 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Terminate stuck apt or dpkg processes
+      shell: |
+        killall -q apt apt-get dpkg unattended-upgrade || true
+      ignore_errors: yes
+
+    - name: Remove package manager lock files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/dpkg/lock
+        - /var/lib/dpkg/lock-frontend
+        - /var/lib/apt/lists/lock
+        - /var/cache/apt/archives/lock
+
+    - name: Fix any interrupted dpkg configuration
+      command: dpkg --configure -a
+
+    - name: Purge APT packages installed by custom-ubuntu (excluding ssh, git, curl)
+      apt:
+        name:
+          # Browsers
+          - google-chrome-stable
+          # Editors & IDEs
+          - code
+          - codeblocks
+          - codeblocks-common
+          - codeblocks-contrib
+          - libcodeblocks0
+          - geany
+          - geany-common
+          - geany-plugins-common
+          - kate
+          - kwrite
+          - sublime-text
+          - vim
+          - vim-gtk3
+          - vim-gui-common
+          # Compilers & Toolchains
+          - build-essential
+          - g++
+          - gcc
+          - pypy3
+          - python3-pip
+          - python3-venv
+          - python3-dev
+        state: absent
+        purge: yes
+      ignore_errors: yes
+
+    - name: Purge default bloatware packages
+      shell: |
+        DEBIAN_FRONTEND=noninteractive apt-get purge -y "libreoffice*" remmina "remmina-plugin-*" shotwell shotwell-common xterm 2>/dev/null || true
+      ignore_errors: yes
+
+    - name: Remove update-alternatives for manually installed OpenJDK
+      shell: |
+        update-alternatives --remove java /usr/lib/jvm/openjdk-21.0.4/bin/java 2>/dev/null || true
+        update-alternatives --remove javac /usr/lib/jvm/openjdk-21.0.4/bin/javac 2>/dev/null || true
+        update-alternatives --remove jar /usr/lib/jvm/openjdk-21.0.4/bin/jar 2>/dev/null || true
+      ignore_errors: yes
+
+    - name: Remove manually extracted software in /opt and /usr/lib/jvm
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        # IntelliJ IDEA
+        - /opt/intellij
+        - /usr/local/bin/idea
+        - /usr/share/applications/intellij.desktop
+        # PyCharm
+        - /opt/pycharm
+        - /usr/local/bin/pycharm
+        - /usr/share/applications/pycharm.desktop
+        # Adoptium OpenJDK 21
+        - /usr/lib/jvm/openjdk-21.0.4
+        - /etc/profile.d/java.sh
+        # Custom ISO directories
+        - /etc/custom-iso-config
+        - /opt/custom-iso-packages
+
+    - name: Remove third-party apt repositories and keyrings
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/sublime-text.list
+        - /etc/apt/sources.list.d/google-chrome.list
+        - /usr/share/keyrings/sublimehq-archive-keyring.gpg
+
+    - name: Clean temporary installer and archive files from /tmp
+      shell: |
+        rm -rf /tmp/google-chrome* /tmp/vscode* /tmp/intellij* /tmp/pycharm* /tmp/openjdk* /tmp/*.deb /tmp/*.tar.gz 2>/dev/null || true
+
+    - name: Remove mock user and home directory if present
+      user:
+        name: mock
+        state: absent
+        remove: yes
+      ignore_errors: yes
+
+    - name: Autoremove orphaned packages and purge lingering configs
+      apt:
+        autoremove: yes
+        purge: yes
+        autoclean: yes
+
+    - name: Clean apt download cache
+      apt:
+        clean: yes

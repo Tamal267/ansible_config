@@ -1,0 +1,6 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Shut down target PCs
+      community.general.shutdown:

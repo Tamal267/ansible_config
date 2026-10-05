@@ -34,7 +34,7 @@
         shell: /bin/bash
         create_home: yes
         skeleton: /etc/skel
-        password: '$6$ChbgMGoNGgFVFMem$3YOit.TTj.1fZpO8CX2Fh5rhrp8OLG21AsmQiA/3f2gqLVOs2eXQeAluyuVFoUIvWcNGhE.GbuMQ.W3/KzWBJ1'
+        password: '$6$36jg0sbakKJ77crl$nL/RG.ajq.yPt3KO0Y0Zi00P9ijYtWM4qYFqMEsfe1wGKdKYarEVSoHHiWIMElj/lNbN/I94A0maUuRg403Qk/'
         state: present
 
     - name: Ensure /home/{{ username }}/.config directory exists

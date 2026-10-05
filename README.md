@@ -204,6 +204,42 @@ To set a specific custom date & time across all target PCs:
 ansible-playbook -i inventory.ini -K sync_time.yml -e "target_time='2026-07-22 09:00:00'"
 ```
 
+### Shut Down Target PCs
+
+To safely power off all target PCs (or specific PCs/groups):
+
+```bash
+# Using script wrapper (interactive confirmation):
+./shutdown.sh
+
+# Target a specific host or group (e.g. pc1 or mmg):
+./shutdown.sh -l pc1
+
+# Skip confirmation prompt:
+./shutdown.sh -y
+
+# Directly via Ansible playbook:
+ansible-playbook -i inventory.ini -K shutdown.yml
+```
+
+### Uninstall Custom Packages & Clean Locks / Temp Files
+
+To uninstall all packages installed by `custom-ubuntu` (Chrome, VS Code, Code::Blocks, Geany, Kate, Sublime, IntelliJ, PyCharm, Java 21, GCC/G++, PyPy3, etc.), clear stale package manager locks, and remove temporary installer files—while safely preserving **SSH, Git, Curl, python3, Ansible configs, and `.ssh` keys**:
+
+```bash
+# Using script wrapper (interactive confirmation):
+./cleanup_custom_packages.sh
+
+# Target a specific host or group (e.g. pc1 or mmg):
+./cleanup_custom_packages.sh -l pc1
+
+# Skip confirmation prompt:
+./cleanup_custom_packages.sh -y
+
+# Directly via Ansible playbook:
+ansible-playbook -i inventory.ini -K cleanup_custom_packages.yml
+```
+
 ---
 
 ## Uptime Kuma Dashboard & Monitoring
