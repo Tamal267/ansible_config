@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read installed editor inventory and merge a previous restore manifest.
+"""Read installed editors, calculators, image viewers, and video players.
 
 This script never installs or removes software. Ansible applies the returned plan.
 """
@@ -23,6 +23,13 @@ APT_NAMES = {
     'joe', 'jove', 'micro', 'ne', 'ed', 'scite', 'medit', 'notepadqq',
     'bluefish', 'beaver', 'gobby', 'gobby-0.5', 'tea', 'nedit', 'nedit-ng',
     'kakoune', 'helix', 'codeblocks', 'codeblocks-common', 'codeblocks-contrib',
+    # Calculator, image viewers, and video players (applications, not libraries).
+    'gnome-calculator', 'galculator', 'kcalc', 'mate-calc', 'speedcrunch',
+    'qalculate-gtk', 'qalculate-qt', 'xcalc',
+    'eog', 'eom', 'loupe', 'ristretto', 'gwenview', 'feh', 'qview', 'nomacs',
+    'mirage', 'sxiv', 'nsxiv', 'imv',
+    'mpv', 'totem', 'vlc', 'celluloid', 'parole', 'dragonplayer', 'haruna',
+    'smplayer', 'xplayer',
 }
 SNAP_NAMES = {
     'nano', 'gedit', 'gnome-text-editor', 'kate', 'kwrite', 'geany', 'sublime-text',
@@ -30,12 +37,20 @@ SNAP_NAMES = {
     'micro', 'notepadqq', 'notepad-plus-plus', 'intellij-idea-community',
     'intellij-idea-ultimate', 'pycharm-community', 'pycharm-professional',
     'codeblocks', 'helix',
+    'gnome-calculator', 'galculator', 'kcalc', 'speedcrunch', 'qalculate',
+    'eog', 'loupe', 'gwenview', 'qview', 'nomacs',
+    'mpv', 'totem', 'vlc', 'celluloid', 'haruna', 'smplayer',
 }
 FLATPAK_IDS = {
     'org.gnome.TextEditor', 'org.gnome.gedit', 'org.kde.kate', 'org.kde.kwrite',
     'org.xfce.mousepad', 'org.geany.Geany', 'com.visualstudio.code',
     'com.vscodium.codium', 'com.sublimetext.three', 'io.atom.Atom',
     'org.gnu.emacs', 'io.neovim.nvim', 'org.codeblocks.codeblocks',
+    'org.gnome.Calculator', 'org.kde.kcalc', 'org.speedcrunch.SpeedCrunch',
+    'io.github.Qalculate', 'org.gnome.eog', 'org.gnome.Loupe', 'org.kde.gwenview',
+    'com.interversehq.qView', 'org.nomacs.ImageLounge', 'io.mpv.Mpv',
+    'org.gnome.Totem', 'org.videolan.VLC', 'io.github.celluloid_player.Celluloid',
+    'org.kde.haruna', 'info.smplayer.SMPlayer',
 }
 APP_APT_PACKAGES = {
     'geany': ['geany', 'geany-common', 'geany-plugins-common'],
@@ -49,6 +64,11 @@ APP_APT_PACKAGES = {
     'intellij-idea-ultimate': ['intellij-idea-community'],
     'pycharm-community': ['pycharm-community'],
     'pycharm-professional': ['pycharm-community'],
+    **{name: [name] for name in (
+        'gnome-calculator', 'galculator', 'kcalc', 'speedcrunch', 'eog', 'loupe',
+        'gwenview', 'qview', 'nomacs', 'mpv', 'totem', 'vlc', 'celluloid',
+        'haruna', 'smplayer')},
+    'qalculate': ['qalculate-gtk', 'qalculate-qt'],
 }
 FLATPAK_APP_NAMES = {
     'org.gnome.TextEditor': 'gnome-text-editor', 'org.gnome.gedit': 'gedit',
@@ -59,6 +79,13 @@ FLATPAK_APP_NAMES = {
     'com.jetbrains.IntelliJ-IDEA-Ultimate': 'intellij-idea-community',
     'com.jetbrains.PyCharm-Community': 'pycharm-community',
     'com.jetbrains.PyCharm-Professional': 'pycharm-community',
+    'org.gnome.Calculator': 'gnome-calculator', 'org.kde.kcalc': 'kcalc',
+    'org.speedcrunch.SpeedCrunch': 'speedcrunch', 'io.github.Qalculate': 'qalculate',
+    'org.gnome.eog': 'eog', 'org.gnome.Loupe': 'loupe', 'org.kde.gwenview': 'gwenview',
+    'com.interversehq.qView': 'qview', 'org.nomacs.ImageLounge': 'nomacs',
+    'io.mpv.Mpv': 'mpv', 'org.gnome.Totem': 'totem', 'org.videolan.VLC': 'vlc',
+    'io.github.celluloid_player.Celluloid': 'celluloid', 'org.kde.haruna': 'haruna',
+    'info.smplayer.SMPlayer': 'smplayer',
 }
 
 
@@ -73,7 +100,10 @@ def desktop_metadata(path):
         parser.read(path, encoding='utf-8')
         entry = parser['Desktop Entry']
         categories = set(entry.get('Categories', '').split(';'))
-        return bool(categories & {'TextEditor', 'IDE'}), entry.get('X-Flatpak', '')
+        selected = bool(categories & {'TextEditor', 'IDE', 'Calculator'})
+        selected = selected or {'Graphics', 'Viewer'} <= categories
+        selected = selected or {'Video', 'Player'} <= categories
+        return selected, entry.get('X-Flatpak', '')
     except (OSError, UnicodeError, configparser.Error, KeyError):
         return False, ''
 

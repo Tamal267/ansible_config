@@ -12,6 +12,35 @@ spec.loader.exec_module(inventory)
 
 
 class EditorInventoryTests(unittest.TestCase):
+    def test_calculator_image_viewer_mpv_and_videos_are_selected_when_installed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            selected, _ = inventory.apt_editors(
+                {'gnome-calculator', 'eog', 'loupe', 'mpv', 'totem', 'firefox'},
+                directory, lambda _: set())
+        self.assertEqual(selected, ['eog', 'gnome-calculator', 'loupe', 'mpv', 'totem'])
+
+    def test_desktop_categories_find_apps_without_selecting_browser_or_pdf_viewer(self):
+        categories = {
+            'custom-calc': 'Utility;Calculator;',
+            'custom-image': 'Graphics;Viewer;',
+            'custom-video': 'AudioVideo;Video;Player;',
+            'firefox': 'Network;WebBrowser;',
+            'pdf-viewer': 'Office;Viewer;',
+            'music': 'AudioVideo;Audio;Player;',
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            for name, value in categories.items():
+                (Path(directory) / (name + '.desktop')).write_text(
+                    '[Desktop Entry]\nCategories=' + value + '\n')
+            selected, _ = inventory.apt_editors(set(categories), directory, lambda path: {path.stem})
+        self.assertEqual(selected, ['custom-calc', 'custom-image', 'custom-video'])
+
+    def test_store_calculator_and_viewers_prevent_duplicate_apt_install(self):
+        current = {'snap': [{'key': 'mpv'}], 'flatpak': [
+            {'key': 'system:org.gnome.Calculator'}, {'key': 'system:org.gnome.eog'},
+            {'key': 'user:student:org.gnome.Totem'}]}
+        self.assertEqual(inventory.non_apt_packages(current), ['eog', 'gnome-calculator', 'mpv', 'totem'])
+
     def test_discovers_terminal_and_desktop_editors_without_selecting_browser(self):
         with tempfile.TemporaryDirectory() as directory:
             for name, categories in [('custom-editor', 'Utility;TextEditor;'),

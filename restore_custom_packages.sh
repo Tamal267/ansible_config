@@ -11,7 +11,7 @@ usage() {
     cat <<'EOF'
 Usage: restore_custom_packages.sh [-i INVENTORY] [-l LIMIT] [-y] [--check] [--codeblocks-only]
 
-Restore missing software and recorded text editors; update Code::Blocks.
+Restore missing software, editors, calculators, image/video viewers; update Code::Blocks.
 Installed applications are skipped except Code::Blocks. Prompts for sudo password.
 
   -i FILE             Inventory file

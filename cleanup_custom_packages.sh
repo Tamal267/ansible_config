@@ -76,6 +76,7 @@ if [[ "$ASSUME_YES" = false ]]; then
     echo "WARNING: This will uninstall custom packages (Chrome, VS Code, Code::Blocks,"
     echo "Geany, Kate, Sublime, IntelliJ, PyCharm, Java 21, GCC/G++, PyPy3, etc.),"
     echo "remove installed APT/Snap/Flatpak text editors (including Nano),"
+    echo "calculators, image viewers, MPV and other video players,"
     echo "remove package manager locks, and clear /tmp installer archives on:"
     echo "  ${TARGET_DESC}"
     echo "SSH, Git, Curl, python3, Ansible configs, and .ssh keys will be preserved."

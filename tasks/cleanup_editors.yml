@@ -1,5 +1,5 @@
 ---
-- name: Discover installed APT, Snap, and Flatpak editors
+- name: Discover installed APT, Snap, and Flatpak applications
   ansible.builtin.script:
     cmd: "{{ playbook_dir }}/scripts/editor_inventory.py"
     executable: python3
@@ -7,16 +7,16 @@
   changed_when: false
   check_mode: no
 
-- name: Read the discovered editor inventory
+- name: Read the discovered application inventory
   ansible.builtin.set_fact:
     cleanup_editors: "{{ cleanup_editor_inventory.stdout | from_json }}"
 
-- name: Report detected portable editors that need a separate uninstaller
+- name: Report detected portable applications that need a separate uninstaller
   ansible.builtin.debug:
-    msg: "Unmanaged editor desktop entries (not removed automatically): {{ cleanup_editors.unmanaged }}"
+    msg: "Unmanaged application desktop entries (not removed automatically): {{ cleanup_editors.unmanaged }}"
   when: cleanup_editors.unmanaged | length > 0
 
-- name: Ensure the editor restore record directory exists
+- name: Ensure the application restore record directory exists
   ansible.builtin.file:
     path: /var/lib/ansible_config
     state: directory
@@ -24,7 +24,7 @@
     group: root
     mode: '0700'
 
-- name: Record editors before removing them, retaining previous cleanup records
+- name: Record applications before removing them, retaining previous cleanup records
   ansible.builtin.copy:
     dest: /var/lib/ansible_config/editor-restore.json
     content: "{{ cleanup_editors.merged | to_nice_json }}\n"
@@ -32,14 +32,14 @@
     group: root
     mode: '0600'
 
-- name: Purge installed APT text editors and IDEs
+- name: Purge installed APT editors, calculators, image viewers, and video players
   ansible.builtin.apt:
     name: "{{ cleanup_editors.current.apt }}"
     state: absent
     purge: yes
   when: cleanup_editors.current.apt | length > 0
 
-- name: Remove installed Snap editors
+- name: Remove installed Snap applications
   ansible.builtin.command:
     argv: "{{ item.remove }}"
   loop: "{{ cleanup_editors.current.snap }}"
@@ -47,7 +47,7 @@
     label: "{{ item.key }}"
   when: not ansible_check_mode
 
-- name: Remove installed system and per-user Flatpak editors
+- name: Remove installed system and per-user Flatpak applications
   ansible.builtin.command:
     argv: "{{ item.remove }}"
   loop: "{{ cleanup_editors.current.flatpak }}"
