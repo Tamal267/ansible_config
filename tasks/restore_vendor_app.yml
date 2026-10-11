@@ -50,37 +50,54 @@
     - name: Restore Sublime Text from its signed stable repository
       when: restore_app.package == 'sublime-text'
       block:
-        - name: Read the existing Sublime APT candidate
+        - name: Ensure the APT key directory exists
+          ansible.builtin.file:
+            path: /etc/apt/keyrings
+            state: directory
+            mode: '0755'
+
+        - name: Download the official Sublime signing key
+          ansible.builtin.get_url:
+            url: https://download.sublimetext.com/sublimehq-pub.gpg
+            dest: /etc/apt/keyrings/sublimehq-pub.asc
+            mode: '0644'
+
+        - name: Restore the official Sublime stable APT source
+          ansible.builtin.copy:
+            dest: /etc/apt/sources.list.d/sublime-text.sources
+            content: |
+              Types: deb
+              URIs: https://download.sublimetext.com/
+              Suites: apt/stable/
+              Signed-By: /etc/apt/keyrings/sublimehq-pub.asc
+            mode: '0644'
+
+        - name: Remove the replaced legacy Sublime source to avoid duplicate entries
+          ansible.builtin.file:
+            path: /etc/apt/sources.list.d/sublime-text.list
+            state: absent
+
+        - name: Refresh APT after restoring Sublime and expose repository errors
+          ansible.builtin.command:
+            argv: [apt-get, update, -o, 'APT::Update::Error-Mode=any', -o, 'Acquire::Retries=2', -o, 'Acquire::https::Timeout=30', -o, 'Acquire::http::Timeout=30']
+          environment:
+            LC_ALL: C
+          changed_when: false
+          when: not ansible_check_mode
+
+        - name: Check Sublime is available from the restored repository
           ansible.builtin.command: apt-cache policy sublime-text
+          environment:
+            LC_ALL: C
           register: restore_sublime_candidate
           changed_when: false
-          check_mode: no
+          when: not ansible_check_mode
 
-        - name: Add the Sublime repository if there is no existing candidate
-          when: "restore_sublime_candidate.stdout is not search('Candidate: (?!\\(none\\))\\S+')"
-          block:
-            - name: Ensure the APT key directory exists
-              ansible.builtin.file:
-                path: /etc/apt/keyrings
-                state: directory
-                mode: '0755'
-
-            - name: Download the official Sublime signing key
-              ansible.builtin.get_url:
-                url: https://download.sublimetext.com/sublimehq-pub.gpg
-                dest: /etc/apt/keyrings/sublimehq-pub.asc
-                mode: '0644'
-
-            - name: Restore the Sublime stable APT source
-              ansible.builtin.copy:
-                dest: /etc/apt/sources.list.d/sublime-text.list
-                content: "deb [signed-by=/etc/apt/keyrings/sublimehq-pub.asc] https://download.sublimetext.com/ apt/stable/\n"
-                mode: '0644'
-
-            - name: Refresh APT after adding Sublime
-              ansible.builtin.apt:
-                update_cache: yes
-              when: not ansible_check_mode
+        - name: Require a Sublime installation candidate before installing
+          ansible.builtin.assert:
+            that: "restore_sublime_candidate.stdout is search('Candidate: (?!\\(none\\))\\S+')"
+            fail_msg: "Sublime Text is unavailable after restoring its official repository. APT policy: {{ restore_sublime_candidate.stdout }}"
+          when: not ansible_check_mode
 
         - name: Install missing Sublime Text
           ansible.builtin.apt:

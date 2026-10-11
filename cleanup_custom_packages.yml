@@ -5,6 +5,32 @@
     # Removing a desktop editor can also remove a desktop metapackage. Do not
     # let the subsequent autoremove take away the remaining browser/session.
     cleanup_protected_autoremove: '(?m)^(?:Remv|Purg) (?:firefox|chromium|chromium-browser|epiphany-browser|falkon|midori|snapd|gnome-shell|gnome-session|ubuntu-session|gdm3|lightdm|sddm|plasma-desktop|plasma-workspace|xfce4-session|mate-session-manager|cinnamon|xorg)(?:[:\s]|$)'
+    cleanup_custom_apt_packages:
+      # Browsers
+      - google-chrome-stable
+      # Editors & IDEs
+      - code
+      - codeblocks
+      - codeblocks-common
+      - codeblocks-contrib
+      - libcodeblocks0
+      - geany
+      - geany-common
+      - geany-plugins-common
+      - kate
+      - kwrite
+      - sublime-text
+      - vim
+      - vim-gtk3
+      - vim-gui-common
+      # Compilers & Toolchains
+      - build-essential
+      - g++
+      - gcc
+      - pypy3
+      - python3-pip
+      - python3-venv
+      - python3-dev
   tasks:
     - name: Terminate stuck apt or dpkg processes
       shell: |
@@ -27,37 +53,16 @@
     - name: Record and remove installed text editors and IDEs
       ansible.builtin.import_tasks: tasks/cleanup_editors.yml
 
+    - name: Read remaining installed APT packages after editor removal
+      ansible.builtin.package_facts:
+        manager: apt
+
     - name: Purge APT packages installed by custom-ubuntu (excluding ssh, git, curl)
       apt:
-        name:
-          # Browsers
-          - google-chrome-stable
-          # Editors & IDEs
-          - code
-          - codeblocks
-          - codeblocks-common
-          - codeblocks-contrib
-          - libcodeblocks0
-          - geany
-          - geany-common
-          - geany-plugins-common
-          - kate
-          - kwrite
-          - sublime-text
-          - vim
-          - vim-gtk3
-          - vim-gui-common
-          # Compilers & Toolchains
-          - build-essential
-          - g++
-          - gcc
-          - pypy3
-          - python3-pip
-          - python3-venv
-          - python3-dev
+        name: "{{ cleanup_custom_apt_packages | intersect(ansible_facts.packages.keys() | list) }}"
         state: absent
         purge: yes
-      ignore_errors: yes
+      when: cleanup_custom_apt_packages | intersect(ansible_facts.packages.keys() | list) | length > 0
 
     - name: Purge default bloatware packages
       shell: |
@@ -97,8 +102,10 @@
         state: absent
       loop:
         - /etc/apt/sources.list.d/sublime-text.list
+        - /etc/apt/sources.list.d/sublime-text.sources
         - /etc/apt/sources.list.d/google-chrome.list
         - /usr/share/keyrings/sublimehq-archive-keyring.gpg
+        - /etc/apt/keyrings/sublimehq-pub.asc
 
     - name: Clean temporary installer and archive files from /tmp
       shell: |
