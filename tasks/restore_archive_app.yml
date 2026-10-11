@@ -1,0 +1,105 @@
+---
+- name: "Check for an existing {{ restore_app.name }} installation"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import glob, os, shutil, sys
+        executable, launcher, *patterns = sys.argv[1:]
+        present = shutil.which(executable) or os.path.isfile(launcher)
+        snap_name = {'idea': 'intellij-idea-community', 'pycharm': 'pycharm-community'}[executable]
+        present = present or os.path.isfile('/snap/bin/' + executable)
+        present = present or os.path.isfile('/snap/bin/' + snap_name)
+        present = present or any(glob.glob(pattern) for pattern in patterns)
+        sys.exit(0 if present else 1)
+      - "{{ restore_app.executable }}"
+      - "{{ restore_app.directory }}/{{ restore_app.launcher }}"
+      - "{{ restore_app.patterns[0] }}"
+      - "{{ restore_app.patterns[-1] }}"
+  register: restore_archive_present
+  changed_when: false
+  failed_when: restore_archive_present.rc not in [0, 1]
+  check_mode: no
+
+- name: "Restore missing {{ restore_app.name }}"
+  when: restore_archive_present.rc == 1 and not ansible_check_mode
+  block:
+    - name: Refuse to overwrite an existing incomplete IDE directory
+      ansible.builtin.stat:
+        path: "{{ restore_app.directory }}"
+      register: restore_archive_directory
+
+    - name: Require an unused installation directory
+      ansible.builtin.assert:
+        that: not restore_archive_directory.stat.exists
+        fail_msg: "{{ restore_app.directory }} exists without a recognized launcher. Inspect it before restoring."
+
+    - name: Resolve the available Community release from JetBrains
+      ansible.builtin.uri:
+        url: "https://data.services.jetbrains.com/products/releases?code={{ restore_app.product }}&latest=true&type=release"
+        return_content: yes
+      register: restore_jetbrains_release
+
+    - name: Require a downloadable Linux release
+      ansible.builtin.assert:
+        that:
+          - restore_jetbrains_release.json[restore_app.product] | length > 0
+          - restore_jetbrains_release.json[restore_app.product][0].downloads.linux.link is defined
+          - restore_jetbrains_release.json[restore_app.product][0].downloads.linux.checksumLink is defined
+
+    - name: Create a temporary IDE download directory
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: restore-ide-
+      register: restore_archive_tmp
+
+    - name: Download the IDE archive and verify the vendor SHA256
+      ansible.builtin.get_url:
+        url: "{{ restore_jetbrains_release.json[restore_app.product][0].downloads.linux.link }}"
+        checksum: "sha256:{{ restore_jetbrains_release.json[restore_app.product][0].downloads.linux.checksumLink }}"
+        dest: "{{ restore_archive_tmp.path }}/ide.tar.gz"
+        mode: '0644'
+
+    - name: Create the IDE installation directory
+      ansible.builtin.file:
+        path: "{{ restore_app.directory }}"
+        state: directory
+        mode: '0755'
+
+    - name: Extract the IDE into its original installation location
+      ansible.builtin.unarchive:
+        src: "{{ restore_archive_tmp.path }}/ide.tar.gz"
+        dest: "{{ restore_app.directory }}"
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+
+    - name: Restore the command launcher
+      ansible.builtin.file:
+        src: "{{ restore_app.directory }}/{{ restore_app.launcher }}"
+        dest: "/usr/local/bin/{{ restore_app.executable }}"
+        state: link
+
+    - name: Restore the desktop menu entry
+      ansible.builtin.copy:
+        dest: "/usr/share/applications/{{ restore_app.desktop }}"
+        mode: '0644'
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name={{ restore_app.name }}
+          Exec={{ restore_app.directory }}/{{ restore_app.launcher }} %f
+          Icon={{ restore_app.directory }}/{{ restore_app.icon }}
+          Terminal=false
+          Categories=Development;IDE;
+  always:
+    - name: Remove the temporary IDE archive
+      ansible.builtin.file:
+        path: "{{ restore_archive_tmp.path }}"
+        state: absent
+      when: restore_archive_tmp.path is defined
+
+- name: Report the missing IDE in dry-run mode
+  ansible.builtin.debug:
+    msg: "Would install {{ restore_app.name }}; archive installation is skipped during --check."
+  when: restore_archive_present.rc == 1 and ansible_check_mode

@@ -1,0 +1,148 @@
+---
+- name: Restore missing custom software and update Code::Blocks
+  hosts: all
+  become: yes
+  vars:
+    restore_apt_packages:
+      - build-essential
+      - g++
+      - gcc
+      - pypy3
+      - python3-pip
+      - python3-venv
+      - python3-dev
+      - geany
+      - geany-common
+      - geany-plugins-common
+      - kate
+      - kwrite
+      - vim
+      - vim-gtk3
+      - vim-gui-common
+      - libreoffice
+      - remmina
+      - remmina-plugin-rdp
+      - remmina-plugin-vnc
+      - shotwell
+      - shotwell-common
+      - xterm
+    restore_vendor_apps:
+      - name: Google Chrome
+        package: google-chrome-stable
+        executable: google-chrome
+        deb_url: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+      - name: Visual Studio Code
+        package: code
+        executable: code
+        deb_url: https://update.code.visualstudio.com/latest/linux-deb-x64/stable
+      - name: Sublime Text
+        package: sublime-text
+        executable: subl
+    restore_archive_apps:
+      - name: IntelliJ IDEA Community
+        product: IIC
+        presence_key: intellij-idea-community
+        executable: idea
+        directory: /opt/intellij
+        launcher: bin/idea.sh
+        icon: bin/idea.svg
+        desktop: intellij.desktop
+        patterns: ['/opt/idea*/bin/idea.sh', '/opt/intellij*/bin/idea.sh']
+      - name: PyCharm Community
+        product: PCC
+        presence_key: pycharm-community
+        executable: pycharm
+        directory: /opt/pycharm
+        launcher: bin/pycharm.sh
+        icon: bin/pycharm.svg
+        desktop: pycharm.desktop
+        patterns: ['/opt/pycharm*/bin/pycharm.sh']
+  pre_tasks:
+    - name: Require Ubuntu amd64 for the vendor installers
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == 'Ubuntu'
+          - ansible_facts.architecture == 'x86_64'
+        fail_msg: This restore playbook currently supports Ubuntu on amd64 PCs.
+      tags: always
+
+    - name: Read installed APT packages
+      ansible.builtin.package_facts:
+        manager: apt
+      tags: always
+
+    - name: Refresh APT metadata without upgrading packages
+      ansible.builtin.apt:
+        update_cache: yes
+      tags: always
+
+  tasks:
+    - name: Restore editors recorded by cleanup
+      ansible.builtin.import_tasks: tasks/restore_editors.yml
+      tags: restore
+
+    - name: Restore only missing APT packages
+      ansible.builtin.apt:
+        name: "{{ restore_apt_packages | difference(ansible_facts.packages.keys() | list) | difference(restore_editors.non_apt_packages) }}"
+        state: present
+      when: restore_apt_packages | difference(ansible_facts.packages.keys() | list) | difference(restore_editors.non_apt_packages) | length > 0
+      tags: restore
+
+    - name: Restore vendor applications only when missing
+      ansible.builtin.include_tasks: tasks/restore_vendor_app.yml
+      loop: "{{ restore_vendor_apps }}"
+      loop_control:
+        loop_var: restore_app
+        label: "{{ restore_app.name }}"
+      when:
+        - restore_app.package not in ansible_facts.packages
+        - restore_app.package not in restore_editors.non_apt_packages
+      tags: restore
+
+    - name: Restore manually installed IDEs only when missing
+      ansible.builtin.include_tasks: tasks/restore_archive_app.yml
+      loop: "{{ restore_archive_apps }}"
+      loop_control:
+        loop_var: restore_app
+        label: "{{ restore_app.name }}"
+      when: restore_app.presence_key not in restore_editors.non_apt_packages
+      tags: restore
+
+    - name: Check whether Java is already available
+      ansible.builtin.shell: command -v java
+      register: restore_java
+      changed_when: false
+      failed_when: restore_java.rc not in [0, 1]
+      check_mode: no
+      tags: restore
+
+    - name: Restore Java 21 when Java is missing
+      ansible.builtin.apt:
+        name: openjdk-21-jdk
+        state: present
+      when: restore_java.rc == 1
+      tags: restore
+
+    - name: Install or update Code::Blocks and its plugins to the APT candidate
+      ansible.builtin.apt:
+        name:
+          - codeblocks
+          - codeblocks-common
+          - codeblocks-contrib
+        state: latest
+        allow_downgrade: no
+      tags: codeblocks
+
+    - name: Read the installed Code::Blocks package version
+      ansible.builtin.command:
+        argv: [dpkg-query, -W, '-f=${Version}', codeblocks]
+      register: restore_codeblocks_version
+      changed_when: false
+      when: not ansible_check_mode
+      tags: codeblocks
+
+    - name: Report the resulting Code::Blocks version
+      ansible.builtin.debug:
+        msg: "Code::Blocks {{ restore_codeblocks_version.stdout }} (newest candidate in configured APT repositories)."
+      when: not ansible_check_mode
+      tags: codeblocks

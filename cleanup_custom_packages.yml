@@ -1,6 +1,10 @@
 ---
 - hosts: all
   become: yes
+  vars:
+    # Removing a desktop editor can also remove a desktop metapackage. Do not
+    # let the subsequent autoremove take away the remaining browser/session.
+    cleanup_protected_autoremove: '(?m)^(?:Remv|Purg) (?:firefox|chromium|chromium-browser|epiphany-browser|falkon|midori|snapd|gnome-shell|gnome-session|ubuntu-session|gdm3|lightdm|sddm|plasma-desktop|plasma-workspace|xfce4-session|mate-session-manager|cinnamon|xorg)(?:[:\s]|$)'
   tasks:
     - name: Terminate stuck apt or dpkg processes
       shell: |
@@ -19,6 +23,9 @@
 
     - name: Fix any interrupted dpkg configuration
       command: dpkg --configure -a
+
+    - name: Record and remove installed text editors and IDEs
+      ansible.builtin.import_tasks: tasks/cleanup_editors.yml
 
     - name: Purge APT packages installed by custom-ubuntu (excluding ssh, git, curl)
       apt:
@@ -104,11 +111,25 @@
         remove: yes
       ignore_errors: yes
 
+    - name: Preview orphan removal to preserve the remaining browser and desktop session
+      ansible.builtin.command:
+        argv: [apt-get, --simulate, autoremove, --purge]
+      environment:
+        LC_ALL: C
+      register: cleanup_autoremove_preview
+      changed_when: false
+      check_mode: no
+
     - name: Autoremove orphaned packages and purge lingering configs
       apt:
         autoremove: yes
         purge: yes
-        autoclean: yes
+      when: cleanup_autoremove_preview.stdout is not search(cleanup_protected_autoremove)
+
+    - name: Report autoremove skipped to preserve browsing and desktop access
+      ansible.builtin.debug:
+        msg: Autoremove was skipped because it would remove a remaining browser or desktop session package.
+      when: cleanup_autoremove_preview.stdout is search(cleanup_protected_autoremove)
 
     - name: Clean apt download cache
       apt:

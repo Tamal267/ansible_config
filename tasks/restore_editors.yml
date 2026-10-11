@@ -1,0 +1,59 @@
+---
+- name: Read current editors and the saved cleanup record
+  ansible.builtin.script:
+    cmd: "{{ playbook_dir }}/scripts/editor_inventory.py"
+    executable: python3
+  register: restore_editor_inventory
+  changed_when: false
+  check_mode: no
+
+- name: Read editor restore details
+  ansible.builtin.set_fact:
+    restore_editors: "{{ restore_editor_inventory.stdout | from_json }}"
+
+- name: Restore missing recorded Snap editors without refreshing installed snaps
+  ansible.builtin.command:
+    argv: "{{ item.install }}"
+  loop: "{{ restore_editors.missing.snap }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: not ansible_check_mode
+
+- name: Restore missing recorded system and per-user Flatpak editors
+  ansible.builtin.command:
+    argv: "{{ item.install }}"
+  loop: "{{ restore_editors.missing.flatpak }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: not ansible_check_mode
+
+- name: Refresh editor inventory after restoring store applications
+  ansible.builtin.script:
+    cmd: "{{ playbook_dir }}/scripts/editor_inventory.py"
+    executable: python3
+  register: restore_editor_inventory_after_stores
+  changed_when: false
+  check_mode: no
+
+- name: Refresh editor details after restoring store applications
+  ansible.builtin.set_fact:
+    restore_editors: "{{ restore_editor_inventory_after_stores.stdout | from_json }}"
+
+- name: Restore missing recorded APT editor packages
+  ansible.builtin.apt:
+    name: "{{ restore_editors.saved.apt | default([]) | difference(ansible_facts.packages.keys() | list) | difference(restore_editors.non_apt_packages) | difference(['code', 'sublime-text', 'codeblocks', 'codeblocks-common', 'codeblocks-contrib']) }}"
+    state: present
+  when: restore_editors.saved.apt | default([]) | difference(ansible_facts.packages.keys() | list) | difference(restore_editors.non_apt_packages) | difference(['code', 'sublime-text', 'codeblocks', 'codeblocks-common', 'codeblocks-contrib']) | length > 0
+
+- name: Restore basic text editors when cleanup predates the editor record
+  ansible.builtin.apt:
+    name: "{{ ['nano', 'gedit', 'gnome-text-editor'] | difference(ansible_facts.packages.keys() | list) | difference(restore_editors.non_apt_packages) }}"
+    state: present
+  when:
+    - restore_editors.saved | length == 0
+    - "['nano', 'gedit', 'gnome-text-editor'] | difference(ansible_facts.packages.keys() | list) | difference(restore_editors.non_apt_packages) | length > 0"
+
+- name: Report the planned Snap and Flatpak editor restoration in check mode
+  ansible.builtin.debug:
+    msg: "Would restore Snap editors {{ restore_editors.missing.snap | map(attribute='key') | list }} and Flatpak editors {{ restore_editors.missing.flatpak | map(attribute='key') | list }}."
+  when: ansible_check_mode

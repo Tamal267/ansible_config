@@ -224,7 +224,7 @@ ansible-playbook -i inventory.ini -K shutdown.yml
 
 ### Uninstall Custom Packages & Clean Locks / Temp Files
 
-To uninstall all packages installed by `custom-ubuntu` (Chrome, VS Code, Code::Blocks, Geany, Kate, Sublime, IntelliJ, PyCharm, Java 21, GCC/G++, PyPy3, etc.), clear stale package manager locks, and remove temporary installer files—while safely preserving **SSH, Git, Curl, python3, Ansible configs, and `.ssh` keys**:
+To uninstall packages installed by `custom-ubuntu` (Chrome, VS Code, Code::Blocks, Geany, Kate, Sublime, IntelliJ, PyCharm, Java 21, GCC/G++, PyPy3, etc.), remove installed text editors (including Nano), clear stale package manager locks, and remove temporary installer files—while preserving **SSH, Git, Curl, python3, Ansible configs, and `.ssh` keys**:
 
 ```bash
 # Using script wrapper (interactive confirmation):
@@ -239,6 +239,39 @@ To uninstall all packages installed by `custom-ubuntu` (Chrome, VS Code, Code::B
 # Directly via Ansible playbook:
 ansible-playbook -i inventory.ini -K cleanup_custom_packages.yml
 ```
+
+Editor cleanup covers common terminal editors (Nano, Vim including `vim-tiny`, Neovim, Emacs, Micro, Ed, and others), desktop editors (GNOME Text Editor, Gedit, Mousepad, Pluma, Xed, and others), and additional installed APT/Snap/Flatpak applications whose desktop entry declares `TextEditor` or `IDE`. Flatpak discovery includes the default system installation and existing per-user installations. Named custom Flatpak installations and arbitrary portable executables are outside this discovery. Unmanaged desktop entries are reported for manual removal. Local/devmode editor Snaps stop discovery because they cannot be restored from a store channel.
+
+Before removing editors, cleanup saves a root-owned record at `/var/lib/ansible_config/editor-restore.json` on each target PC. The record retains previously discovered editors across repeated cleanup runs and includes Snap channels and Flatpak origins/branches. Keep that file for revert. Editor removal failures are fatal, so cleanup cannot silently ignore a failed editor uninstall. Browser packages are not selected by editor discovery; the original cleanup still removes Chrome and leaves other browsers such as Firefox alone. Autoremove is simulated first and skipped if it would remove a remaining common browser or desktop session package. This removes editor software, but does not enforce a browser-only kiosk or prevent installing/running portable programs.
+
+### Restore Missing Software and Update Code::Blocks
+
+Run the restore wrapper on the **Ansible control PC** to reinstall missing applications on the target PCs:
+
+```bash
+./restore_custom_packages.sh -l mmg_pc48
+
+# Preview (vendor downloads and archive installations are skipped in check mode):
+./restore_custom_packages.sh -l mmg_pc48 --check
+
+# Install/update only Code::Blocks and its plugins:
+./restore_custom_packages.sh -l mmg_pc48 --codeblocks-only
+
+# All inventory hosts, without the wrapper confirmation:
+./restore_custom_packages.sh -y
+```
+
+The wrapper prompts for the target sudo password through Ansible (`-K`). Target PCs need internet access; run `site_unblock.yml` first if internet access was blocked. Ubuntu amd64 is currently supported.
+
+Existing APT packages are skipped. Missing packages from the cleanup list are installed with `state: present`, including the compiler/Python tools, Geany, Kate, Vim, LibreOffice, Remmina, Shotwell, and XTerm. Missing Chrome and VS Code use official vendor DEBs; missing Sublime Text uses its signed stable repository. The script also checks command launchers before installing those vendor applications, including Snap launchers.
+
+Missing IntelliJ IDEA Community and PyCharm Community use JetBrains' available Community archives with vendor SHA256 verification, restoring `/opt/intellij`, `/opt/pycharm`, command links, and desktop entries. Existing launchers, recognized `/opt` installations, and Community Snap launchers are skipped. Java is left alone when `java` is available; otherwise Ubuntu's `openjdk-21-jdk` is installed. This restores a Java 21 toolchain, rather than recreating the removed Adoptium 21.0.4 directory.
+
+**Only Code::Blocks is requested with `state: latest`**, together with `codeblocks-common` and `codeblocks-contrib`. Here, “latest” means the newest candidate from the target PC's configured APT repositories, which may be older than the latest upstream release. The installed package version is printed at the end. There is no full-system upgrade; APT may still update dependencies when required by an installation.
+
+This is a software restore, not an exact rollback: original versions were not recorded by cleanup. Deleted user homes, preferences, custom ISO directories, and temporary files cannot be reconstructed. The removed `mock` account is not recreated. APT metadata is refreshed, and installation failures are reported instead of ignored.
+
+Restore also reinstalls missing editors from the target's saved editor record, including Snap and Flatpak installations, while skipping installed ones. Their original repositories/store channels must remain available, and per-user Flatpak accounts must still exist. Without a record (for PCs cleaned by the older script), it installs Nano, Gedit, and GNOME Text Editor as defaults. The record tracks package identities, not original APT versions or deleted settings. Code::Blocks continues to use the latest configured APT candidate.
 
 ---
 
