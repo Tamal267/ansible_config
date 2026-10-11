@@ -72,8 +72,23 @@
       tags: always
 
     - name: Refresh APT metadata without upgrading packages
-      ansible.builtin.apt:
-        update_cache: yes
+      # Use apt-get directly so failures show the actual repository/DNS/lock
+      # error, rather than python-apt's generic "unknown reason" message.
+      ansible.builtin.command:
+        argv:
+          - apt-get
+          - update
+          - -o
+          - APT::Update::Error-Mode=any
+          - -o
+          - Acquire::Retries=2
+          - -o
+          - Acquire::http::Timeout=30
+          - -o
+          - Acquire::https::Timeout=30
+      environment:
+        LC_ALL: C
+      changed_when: false
       tags: always
 
   tasks:
